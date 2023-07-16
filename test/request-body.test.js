@@ -1,10 +1,12 @@
 import express from "express";
 import request from "supertest";
+import fileUpload from "express-fileupload";
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(fileUpload());
 
 app.post("/json", (req, res) => {
   const name = req.body.name;
@@ -20,6 +22,13 @@ app.post("/form", (req, res) => {
   });
 });
 
+app.post("/file", async (req, res) => {
+  const textFile = req.files.article;
+  await textFile.mv(__dirname + "/upload/" + textFile.name);
+
+  res.send(`Hello ${req.body.name}, you uploaded ${textFile.name}`);
+});
+
 describe("Request Body", () => {
   it("json", async () => {
     const response = await request(app)
@@ -30,6 +39,16 @@ describe("Request Body", () => {
     expect(response.body).toEqual({
       hello: `Hello World`,
     });
+  });
+
+  it("should be able to upload file", async () => {
+    const response = await request(app)
+      .post("/file")
+      .set("Content-Type", "multipart/form-data")
+      .field("name", "Eko")
+      .attach("article", __dirname + "/contoh.txt");
+
+    expect(response.text).toBe("Hello Eko, you uploaded contoh.txt");
   });
 
   test("form", async () => {
